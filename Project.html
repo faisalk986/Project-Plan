@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Plan Portal</title>
+    <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        :root { --primary: #2c3e50; --secondary: #34495e; --accent: #27ae60; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; padding: 20px; }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        .header { text-align: center; border-bottom: 3px solid var(--primary); padding-bottom: 20px; margin-bottom: 30px; }
+        .input-group { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: var(--primary); }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: var(--primary); color: white; }
+        .btn { padding: 12px 25px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; text-transform: uppercase; }
+        .add-btn { background: var(--accent); color: white; margin-top: 10px; }
+        .download-btn { background: var(--primary); color: white; width: 100%; margin-top: 30px; font-size: 1.1em; }
+        .holiday { background: #ffe6e6; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Project Plan Management Portal</h1>
+        <p>Generate Detailed Low-Level Project Plan (LLPP) Documents</p>
+    </div>
+
+    <div class="input-group">
+        <div>
+            <label>Company Name</label>
+            <input type="text" id="compName" placeholder="e.g. ABC">
+        </div>
+        <div>
+            <label>Project Title</label>
+            <input type="text" id="projTitle" placeholder="e.g. Cloud Migration Phase 1">
+        </div>
+    </div>
+
+    <div class="input-group">
+        <div>
+            <label>Lead Manager</label>
+            <input type="text" id="mgrName" placeholder="e.g. Faisal Khan">
+        </div>
+        <div>
+            <label>Project Month/Year</label>
+            <input type="month" id="projMonth">
+        </div>
+    </div>
+
+    <h3>Task Breakdown & Schedule</h3>
+    <table id="taskTable">
+        <thead>
+            <tr>
+                <th>Day #</th>
+                <th>Task Description</th>
+                <th>Team Member</th>
+                <th>Status / Holiday</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><input type="number" class="tDay" value="1"></td>
+                <td><input type="text" class="tDesc" placeholder="Initial Kickoff"></td>
+                <td><input type="text" class="tMem" placeholder="Lead Architect"></td>
+                <td>
+                    <select class="tType">
+                        <option value="Working Day">Working Day</option>
+                        <option value="Public Holiday">Public Holiday</option>
+                        <option value="Weekend">Weekend</option>
+                    </select>
+                </td>
+                <td><button onclick="this.parentElement.parentElement.remove()">Remove</button></td>
+            </tr>
+        </tbody>
+    </table>
+    <button class="btn add-btn" onclick="addRow()">+ Add Task Row</button>
+
+    <button class="btn download-btn" onclick="generateWord()">Download Detailed Project Plan (.docx)</button>
+</div>
+
+<script>
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageBreak, Table, TableRow, TableCell, WidthType, TableOfContents } = docx;
+
+    function addRow() {
+        const tbody = document.querySelector("#taskTable tbody");
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td><input type="number" class="tDay" value="${tbody.rows.length + 1}"></td>
+            <td><input type="text" class="tDesc" placeholder="Next Task"></td>
+            <td><input type="text" class="tMem"></td>
+            <td>
+                <select class="tType">
+                    <option value="Working Day">Working Day</option>
+                    <option value="Public Holiday">Public Holiday</option>
+                    <option value="Weekend">Weekend</option>
+                </select>
+            </td>
+            <td><button onclick="this.parentElement.parentElement.remove()">Remove</button></td>
+        `;
+        tbody.appendChild(row);
+    }
+
+    async function generateWord() {
+        const company = document.getElementById('compName').value || "Company Name";
+        const title = document.getElementById('projTitle').value || "Project Plan";
+        const manager = document.getElementById('mgrName').value || "Project Manager";
+        const month = document.getElementById('projMonth').value || "Current Month";
+
+        const rows = Array.from(document.querySelectorAll("#taskTable tbody tr")).map(tr => ({
+            day: tr.querySelector(".tDay").value,
+            desc: tr.querySelector(".tDesc").value,
+            mem: tr.querySelector(".tMem").value,
+            type: tr.querySelector(".tType").value
+        }));
+
+        let content = [];
+
+        // --- PAGE 1: COVER PAGE ---
+        content.push(new Paragraph({ text: "", spacing: { before: 2000 } }));
+        content.push(new Paragraph({ 
+            children: [new TextRun({ text: company.toUpperCase(), bold: true, size: 56, color: "2c3e50" })], 
+            alignment: AlignmentType.CENTER 
+        }));
+        content.push(new Paragraph({ text: "", spacing: { before: 500 } }));
+        content.push(new Paragraph({ 
+            children: [new TextRun({ text: "LOW LEVEL PROJECT PLAN", bold: true, size: 32 })], 
+            alignment: AlignmentType.CENTER 
+        }));
+        content.push(new Paragraph({ 
+            text: title, 
+            heading: HeadingLevel.HEADING_1, 
+            alignment: AlignmentType.CENTER 
+        }));
+        content.push(new Paragraph({ text: "", spacing: { before: 3000 } }));
+        content.push(new Paragraph({ text: `Project Lead: ${manager}`, alignment: AlignmentType.CENTER }));
+        content.push(new Paragraph({ text: `Execution Period: ${month}`, alignment: AlignmentType.CENTER }));
+        content.push(new Paragraph({ children: [new PageBreak()] }));
+
+        // --- PAGE 2: TABLE OF CONTENTS ---
+        content.push(new Paragraph({ text: "Table of Contents", heading: HeadingLevel.HEADING_1 }));
+        content.push(new TableOfContents("Contents", { hyperlink: true, headingStyleRange: "1-3" }));
+        content.push(new Paragraph({ children: [new PageBreak()] }));
+
+        // --- PAGE 3: PROJECT START ---
+        content.push(new Paragraph({ text: "1. Project Overview", heading: HeadingLevel.HEADING_1 }));
+        content.push(new Paragraph({ text: `This document outlines the granular day-to-day tasks for the ${title} initiated by ${company}. It serves as the primary technical roadmap for team members.` }));
+
+        content.push(new Paragraph({ text: "2. Detailed Implementation Schedule", heading: HeadingLevel.HEADING_1 }));
+        
+        // Create Table
+        const tableRows = [
+            new TableRow({
+                children: ["Day", "Task Description", "Assignee", "Status"].map(h => new TableCell({
+                    children: [new Paragraph({ text: h, bold: true })],
+                    shading: { fill: "2c3e50" },
+                }))
+            })
+        ];
+
+        rows.forEach(r => {
+            tableRows.push(new TableRow({
+                children: [
+                    new TableCell({ children: [new Paragraph(r.day)] }),
+                    new TableCell({ children: [new Paragraph(r.desc)] }),
+                    new TableCell({ children: [new Paragraph(r.mem)] }),
+                    new TableCell({ 
+                        children: [new Paragraph(r.type)],
+                        shading: r.type !== "Working Day" ? { fill: "fce4e4" } : null 
+                    }),
+                ]
+            }));
+        });
+
+        content.push(new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: tableRows
+        }));
+
+        content.push(new Paragraph({ text: "3. Resource Allocation", heading: HeadingLevel.HEADING_1 }));
+        content.push(new Paragraph({ text: "The team members listed above are responsible for the execution and documentation of their respective tasks." }));
+
+        const doc = new Document({ 
+            features: { updateFields: true },
+            sections: [{ children: content }] 
+        });
+
+        Packer.toBlob(doc).then(blob => {
+            saveAs(blob, `${company}_Project_Plan.docx`);
+        });
+    }
+</script>
+</body>
+</html>
